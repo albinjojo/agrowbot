@@ -59,7 +59,7 @@ Answer:
 
 if __name__ == "__main__":
     while True:
-        user_q = input("Ask a question (or 'exit' to quit): ").strip()
+        user_q = input("Ask a question (or 'exit' to quit the application): ").strip()
         if not user_q or user_q.lower() == "exit":
             break
         print("\n" + answer_question(user_q) + "\n")
