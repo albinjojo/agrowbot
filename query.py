@@ -3,7 +3,10 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from google import genai
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 index = faiss.read_index("agri.index")
 with open("chunks.pkl", "rb") as f:
