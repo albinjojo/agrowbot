@@ -48,10 +48,6 @@ Answer:
         model="gemini-2.5-flash",
         contents=prompt,
         config=genai.types.GenerateContentConfig(
-            # max_output_tokens=256,
-            # temperature=0.3,
-            # top_p=0.95,
-            # top_k=40,
         ),
     )
     return response.text.replace("*", "").strip()
