@@ -1,6 +1,8 @@
 sentence-transformers
 faiss-cpu
 numpy
-google-genai
+openai
+flask
+flask-cors
 python-dotenv
 pypdf
