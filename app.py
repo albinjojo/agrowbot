@@ -1,12 +1,14 @@
-import pickle
-import faiss
-import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import pickle, faiss, numpy as np, os
 from sentence_transformers import SentenceTransformer
 from google import genai
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
+app = Flask(__name__)
+CORS(app)
+
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+chat_history = []
 
 index = faiss.read_index("agri.index")
 with open("chunks.pkl", "rb") as f:
@@ -14,25 +16,21 @@ with open("chunks.pkl", "rb") as f:
 
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
+instruction = """You are a helpful assistant that answers questions primarily based on the provided context. Prefer Kerala-specific agricultural practices, pest control methods, crop varieties, and recommendations whenever they are available in the context. If Kerala-specific information is present, do not use general or global practices. If the user greets (e.g., hello, hi), respond with a short greeting and ask how you can help with agriculture or farming. Summarize in 2-3 short points only. Be concise. No intro or explanation needed and use phrases if needed. If the context does not contain sufficient specific information, respond with general agricultural guidance if the question is related to agriculture or farming. Assume the end user is a farmer and prioritize clear, practical, field-ready guidance over general or theoretical explanations. If the question is not related to agriculture or farming at all, respond with "I am sorry, I don't have the information to answer that question." Do not include asterisk marks or markdown formatting."""
+
 def retrieve(question, k=3):
     q_emb = embedder.encode([question])
     _, ids = index.search(np.array(q_emb), k)
     return [all_chunks[i] for i in ids[0]]
 
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+@app.route("/ask", methods=["POST"])
+def ask():
+    data = request.json
+    question = data.get("question", "")
+    print("Received question:", question)
 
-instruction = (
-    "You are a helpful assistant that answers questions strictly based on the provided context. "
-    "Extract the most relevant pest control methods for rice from the provided data. "
-    "Summarize in 2-3 short bullet points only. Be concise. No intro or explanation needed and use phrases if needed. "
-    "If the context does not contain sufficient information, respond with general, agricultural guidance from your own knowledge, give concrete response instead of asking to user to refer other sources. "
-    "If the question is not related to agriculture or farming, respond with 'I am sorry, I don't have the information to answer that question.' "
-    "Don't include any aestrisk marks or other markdown formatting in your response."
-)
+    context = "\n\n".join(retrieve(f"{question}", k=4))
 
-
-def answer_question(question: str) -> str:
-    context = "\n\n".join(retrieve(question))
     prompt = f"""
 {instruction}
 
@@ -44,18 +42,29 @@ Question:
 
 Answer:
 """
+    contents = chat_history.copy()
+    contents.append({
+        "role": "user",
+        "parts": [{"text": prompt}]
+    })
+    # print("Sending contents to model:", contents)
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt,
-        config=genai.types.GenerateContentConfig(
-        ),
+        contents=contents,
     )
-    return response.text.replace("*", "").strip()
-
+    answer = response.text.replace("*", "").strip()
+    chat_history.append({
+        "role": "user",
+        "parts": [{"text": question}]
+    })
+    chat_history.append({
+        "role": "model",
+        "parts": [{"text": answer}]
+    })
+    print("chat_history:", chat_history)
+    return jsonify({
+        "answer": answer
+    })
 
 if __name__ == "__main__":
-    while True:
-        user_q = input("Ask a question (or 'exit' to quit the application): ").strip()
-        if not user_q or user_q.lower() == "exit":
-            break
-        print("\n" + answer_question(user_q) + "\n")
+    app.run(debug=True)

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AgrowBot 🌱</title>
+
+<style>
+body {
+  background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364);
+  font-family: "Segoe UI", sans-serif;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container {
+  width: 420px;
+  text-align: center;
+}
+
+.robot {
+  width: 130px;
+  height: 130px;
+  margin: auto;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #6dd5ed, #2193b0);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.robot.thinking {
+  box-shadow: 0 0 25px #ffd54f;
+  animation: spin 2s linear infinite;
+}
+
+.robot.talking {
+  animation: bounce 0.4s infinite alternate;
+}
+
+.face {
+  display: flex;
+}
+
+.eye {
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  margin: 0 12px;
+}
+
+@keyframes bounce {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.mic-btn {
+  margin-top: 25px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  background: #ff4b2b;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  animation: pulse 2s infinite;
+}
+
+.mic-btn.listening {
+  background: #00e676;
+  box-shadow: 0 0 30px #00e676;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 15px rgba(255,75,43,0.5); }
+  50% { box-shadow: 0 0 30px rgba(255,75,43,0.9); }
+  100% { box-shadow: 0 0 15px rgba(255,75,43,0.5); }
+}
+
+.chat {
+  margin-top: 25px;
+  text-align: left;
+}
+
+.user-msg {
+  background: rgba(255,255,255,0.15);
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.bot-msg {
+  background: rgba(0,0,0,0.25);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.thinking-text {
+  font-style: italic;
+  color: #ffd54f;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="robot" id="robot">
+    <div class="face">
+      <div class="eye"></div>
+      <div class="eye"></div>
+    </div>
+  </div>
+
+  <button class="mic-btn" id="mic">🎤</button>
+
+  <div class="chat">
+    <div class="user-msg" id="userMsg" style="display:none"></div>
+    <div class="bot-msg" id="botMsg"> . </div>
+  </div>
+</div>
+
+<script>
+const micBtn = document.getElementById("mic");
+const robot = document.getElementById("robot");
+const userMsg = document.getElementById("userMsg");
+const botMsg = document.getElementById("botMsg");
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = "en-IN";
+
+micBtn.onclick = () => {
+  micBtn.classList.add("listening");
+  recognition.start();
+};
+
+recognition.onresult = async (event) => {
+  const text = event.results[0][0].transcript;
+
+  micBtn.classList.remove("listening");
+
+  userMsg.style.display = "block";
+  userMsg.textContent = "🧑 " + text;
+
+  botMsg.innerHTML = "<span class='thinking-text'>AgrowBot is thinking...</span>";
+  robot.classList.add("thinking");
+
+  const res = await fetch("https://xvs72r7z-5000.inc1.devtunnels.ms/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: text })
+  });
+
+  const data = await res.json();
+
+  robot.classList.remove("thinking");
+  robot.classList.add("talking");
+
+  botMsg.textContent = "🤖 " + data.answer;
+  speak(data.answer);
+
+  setTimeout(() => robot.classList.remove("talking"), 1500);
+};
+
+function speak(text) {
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "en-IN";
+  speechSynthesis.speak(utter);
+}
+</script>
+
+</body>
+</html>
