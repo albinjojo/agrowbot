@@ -53,8 +53,6 @@ instruction = (
     "general agricultural guidance if the question is related to agriculture or farming. "
     "Assume the end user is a farmer and prioritize clear, practical, field-ready "
     "guidance over general or theoretical explanations. "
-    "If the question is not related to agriculture or farming at all, respond with "
-    "\"I am sorry, I don't have the information to answer that question.\" "
     "Do not include asterisk marks or markdown formatting."
 )
 
