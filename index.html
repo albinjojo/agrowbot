@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AgrowBot 🌱</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="static/favicon.ico">
+  <style>
+    :root {
+      --bg-color: #050a10;
+      --eye-color: #3d89fc;
+      --eye-glow: rgba(61, 137, 252, 0.2);
+      --text-color: #e0e0e0;
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #0a1a2e 0%, #050a10 100%);
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #active-question {
+      position: absolute;
+      top: 8%;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      width: fit-content;
+      max-width: 85%;
+      text-align: center;
+
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      padding: 15px 30px;
+      border-radius: 40px;
+
+      color: var(--text-color);
+      font-size: 1.3rem;
+      opacity: 0;
+      transform: translateY(-20px);
+      z-index: 5;
+      font-weight: 400;
+    }
+
+    #bot-container {
+      position: relative;
+      width: 100vw;
+      height: 50vh;
+      margin-top: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .eyes-wrapper {
+      display: flex;
+      gap: 80px;
+    }
+
+    .eye {
+      position: relative;
+      width: 220px;
+      /* Wider horizontal */
+      height: 140px;
+      /* Shorter vertical */
+      background: #080808;
+      border-radius: 50%;
+      /* Perfect oval */
+      overflow: hidden;
+      border: 2px solid rgba(61, 137, 252, 0.15);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Crescent shape for pleased look */
+    .eye.pleased {
+      border-radius: 20px 20px 100px 100px;
+      height: 100px;
+      margin-top: 40px;
+    }
+
+    .pupil {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 80px;
+      /* Horizontal Oval Pupil */
+      background: var(--eye-color);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px var(--eye-glow), inset 0 0 10px rgba(255, 255, 255, 0.4);
+    }
+
+    .lid {
+      position: absolute;
+      width: 120%;
+      height: 100%;
+      background: var(--bg-color);
+      left: -10%;
+      z-index: 2;
+    }
+
+    .lid-top {
+      top: -100%;
+    }
+
+    .lid-bottom {
+      bottom: -100%;
+    }
+
+    #ui-overlay {
+      position: absolute;
+      bottom: 40px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #response-container {
+      max-width: 700px;
+      width: 85%;
+      max-height: 250px;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(15px);
+      padding: 25px;
+      border-radius: 20px;
+      color: var(--text-color);
+      text-align: left;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 1.15rem;
+      line-height: 1.6;
+      display: none;
+      pointer-events: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--eye-color) transparent;
+    }
+
+    .input-bar {
+      pointer-events: auto;
+      display: flex;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 10px 20px;
+      border-radius: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    input {
+      background: transparent;
+      border: none;
+      color: white;
+      outline: none;
+      width: 300px;
+      font-size: 1rem;
+    }
+
+    button {
+      background: transparent;
+      border: none;
+      color: var(--eye-color);
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    #mic-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(61, 137, 252, 0.2);
+      border: 1px solid var(--eye-color);
+      box-shadow: 0 0 15px var(--eye-glow);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse-idle 2s infinite;
+    }
+
+    #mic-btn:hover {
+      background: var(--eye-color);
+      color: #050a10;
+      box-shadow: 0 0 25px var(--eye-color);
+      transform: scale(1.1);
+    }
+
+    #mic-btn.listening {
+      background: #ff4d4d;
+      border-color: #ff4d4d;
+      color: white;
+      animation: pulse-mic 1s infinite;
+      box-shadow: 0 0 20px rgba(255, 77, 77, 0.5);
+    }
+
+    @keyframes pulse-idle {
+      0% {
+        box-shadow: 0 0 0 0 rgba(61, 137, 252, 0.4);
+      }
+
+      70% {
+        box-shadow: 0 0 0 10px rgba(61, 137, 252, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(61, 137, 252, 0);
+      }
+    }
+
+    @keyframes pulse-mic {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.2);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* Mobile */
+    #toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-50px);
+      background: rgba(255, 77, 77, 0.9);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(255, 77, 77, 0.3);
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.4s ease;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .eyes-wrapper {
+        gap: 40px;
+      }
+
+      .eye {
+        width: 150px;
+        height: 90px;
+      }
+
+      .pupil {
+        width: 50px;
+        height: 50px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="toast"></div>
+  <div id="active-question"></div>
+  <div id="status-indicator">Idle</div>
+
+  <style>
+    #status-indicator {
+      position: absolute;
+      top: 22%;
+      width: 100%;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      z-index: 0;
+      pointer-events: none;
+    }
+  </style>
+
+  <div id="bot-container">
+    <div class="eyes-wrapper">
+      <div class="eye left-eye">
+        <div class="lid lid-top"></div>
+        <div class="pupil"></div>
+        <div class="lid lid-bottom"></div>
+      </div>
+      <div class="eye right-eye">
+        <div class="lid lid-top"></div>
+        <div class="pupil"></div>
+        <div class="lid lid-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ui-overlay">
+    <div id="response-container"></div>
+    <div class="input-bar">
+      <!-- New Chat Button added -->
+      <button id="new-chat-btn" title="New Chat" style="font-size: 1.5rem;">+</button>
+      <input type="text" id="text-input" placeholder="Ask AgriBot something...">
+      <button id="mic-btn">🎤</button>
+      <button id="send-btn">➔</button>
+    </div>
+  </div>
+
+  <div id="voice-controls">
+    <select id="voice-select">
+      <option value="alloy">Alloy (Neutral)</option>
+      <option value="echo">Echo (Male)</option>
+      <option value="fable">Fable (British)</option>
+      <option value="onyx">Onyx (Deep Male)</option>
+      <option value="nova">Nova (Fem)</option>
+      <option value="shimmer">Shimmer (Fem)</option>
+    </select>
+    <button id="preview-btn">🔊</button>
+  </div>
+
+  <style>
+    #voice-controls {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    #voice-select {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      outline: none;
+      font-family: 'Outfit';
+    }
+
+    #voice-select option {
+      background: #050a10;
+      color: white;
+    }
+
+    #preview-btn {
+      background: rgba(61, 137, 252, 0.2);
+      color: white;
+      border: 1px solid white;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #preview-btn:hover {
+      background: var(--eye-color);
+    }
+  </style>
+
+  <script>
+    const State = { IDLE: 'idle', THINKING: 'thinking', SPEAKING: 'speaking', SLEEPING: 'sleeping' };
+    let currentState = State.IDLE;
+    let sessionId = null;
+    let idleTimer = null;
+    let speakPulseTween = null;
+    let audioPlayer = new Audio();
+
+    const activeQuestion = document.getElementById('active-question');
+    const textInput = document.getElementById('text-input');
+    const micBtn = document.getElementById('mic-btn');
+    const pupils = document.querySelectorAll('.pupil');
+    const lidsTop = document.querySelectorAll('.lid-top');
+    const lidsBottom = document.querySelectorAll('.lid-bottom');
+    const eyes = document.querySelectorAll('.eye');
+    const voiceSelect = document.getElementById('voice-select');
+    const previewBtn = document.getElementById('preview-btn');
+    const statusIndicator = document.getElementById('status-indicator');
+
+    function updateStatus(text, show = true) {
+      statusIndicator.innerText = text;
+      statusIndicator.style.opacity = show ? 0.6 : 0;
+    }
+
+    // --- Animations ---
+
+    function resetIdleTimer() {
+      clearTimeout(idleTimer);
+      if (currentState === State.SLEEPING) wakeUp();
+      idleTimer = setTimeout(goToSleep, 10000); // Sleep after 10s idle
+    }
+
+    function wakeUp() {
+      currentState = State.IDLE;
+      updateStatus("Idle");
+      gsap.to(lidsTop, { top: '-100%', duration: 0.5 });
+      gsap.to(lidsBottom, { bottom: '-100%', duration: 0.5 });
+      gsap.to(eyes, { height: 140, borderRadius: "50%", duration: 0.5 }); // Restore shape
+    }
+
+    function goToSleep() {
+      if (currentState !== State.IDLE) return;
+      currentState = State.SLEEPING;
+      updateStatus("Zzz...", true);
+      gsap.to(lidsTop, { top: '0%', duration: 0.8, ease: "power2.inOut" });
+      gsap.to(lidsBottom, { bottom: '0%', duration: 0.8, ease: "power2.inOut" });
+    }
+
+    function blink() {
+      if (currentState === State.SLEEPING || currentState === State.THINKING) return;
+      const tl = gsap.timeline({ onComplete: () => setTimeout(blink, gsap.utils.random(3000, 6000)) });
+      tl.to(lidsTop, { top: '-10%', duration: 0.15 })
+        .to(lidsTop, { top: '-100%', duration: 0.15 });
+    }
+    blink();
+
+    // Cursor Follow
+    window.addEventListener('mousemove', (e) => {
+      resetIdleTimer();
+      if (currentState === State.IDLE) {
+        const x = (e.clientX / window.innerWidth - 0.5) * 50;
+        const y = (e.clientY / window.innerHeight - 0.5) * 30;
+        gsap.to(pupils, { x: x, y: y, duration: 0.5 });
+      }
+    });
+
+    // Thinking Mode: Deep thought (Look up + slight scan)
+    function setThinking(isThinking) {
+      if (isThinking) {
+        currentState = State.THINKING;
+        updateStatus("Thinking...");
+        // Look up and to the right/left (pondering)
+        gsap.to(pupils, { x: 30, y: -40, duration: 1, ease: "power2.out" });
+        // Slow scan
+        gsap.to(pupils, { x: -30, duration: 2, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        // Narrow eyes
+        gsap.to(lidsTop, { top: '-60%', duration: 0.5 });
+        gsap.to(lidsBottom, { bottom: '-60%', duration: 0.5 });
+      } else {
+        gsap.killTweensOf(pupils);
+        gsap.to(lidsTop, { top: '-100%', duration: 0.5 });
+        gsap.to(lidsBottom, { bottom: '-100%', duration: 0.5 });
+        gsap.to(pupils, { x: 0, y: 0, duration: 0.5 });
+        updateStatus("Idle");
+      }
+    }
+
+    // Speaking Mode: Pulse
+    function setSpeaking(isSpeaking) {
+      if (isSpeaking) {
+        currentState = State.SPEAKING;
+        updateStatus("Speaking...");
+        speakPulseTween = gsap.to(pupils, { scale: 1.15, duration: 0.2, repeat: -1, yoyo: true });
+        // Happy eyes (Crescent)
+        gsap.to(eyes, { borderRadius: "20px 20px 100px 100px", height: 100, duration: 0.3 });
+        gsap.to(lidsBottom, { bottom: '-40%', duration: 0.3 }); // Smile effect
+      } else {
+        currentState = State.IDLE;
+        if (speakPulseTween) speakPulseTween.kill();
+        gsap.to(pupils, { scale: 1, duration: 0.3 });
+        gsap.to(eyes, { borderRadius: "50%", height: 140, duration: 0.3 }); // Back to oval
+        gsap.to(lidsBottom, { bottom: '-100%', duration: 0.3 });
+        resetIdleTimer();
+        updateStatus("Idle");
+      }
+    }
+
+    // --- Interaction ---
+    async function playAudio(source) {
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+
+      // Determine if source is Base64 or URL
+      if (source.startsWith("http") || source.startsWith("/")) {
+        // Resolve full URL if relative path
+        let fullUrl = source;
+        if (source.startsWith("/")) {
+          const backendBase = window.location.origin.startsWith("http") && !window.location.origin.includes("null") && window.location.port !== "5500"
+            ? window.location.origin
+            : "http://127.0.0.1:5000";
+          fullUrl = backendBase + source;
+        }
+
+        let attempts = 0;
+        const checkFile = async () => {
+          try {
+            const res = await fetch(fullUrl, { method: 'HEAD' });
+            if (res.ok) {
+              audioPlayer.src = fullUrl;
+              startPlayback();
+            } else if (attempts < 20) {
+              attempts++;
+              console.log(`Waiting for audio... (${attempts})`);
+              setTimeout(checkFile, 500);
+            } else {
+              console.log("Audio timed out.");
+            }
+          } catch (e) {
+            console.log("Audio check error:", e);
+          }
+        };
+        checkFile();
+      } else {
+        // Base64 fallback
+        audioPlayer.src = "data:audio/mp3;base64," + source;
+        startPlayback();
+      }
+    }
+
+    function typeWriter(text, element, speed = 25) {
+      element.textContent = "";
+      let i = 0;
+      function type() {
+        if (i < text.length) {
+          element.textContent += text.charAt(i);
+          i++;
+          setTimeout(type, speed);
+        }
+      }
+      type();
+    }
+
+    function startPlayback() {
+      audioPlayer.onplay = () => setSpeaking(true);
+      audioPlayer.onended = () => setSpeaking(false);
+      audioPlayer.play().catch(e => console.log("Playback error:", e));
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    async function ask(query, audioB64 = null) {
+      if (!query.trim()) return;
+      // ... existing ask setup ...
+      audioPlayer.pause();
+      setSpeaking(false);
+      resetIdleTimer();
+      setThinking(true);
+
+      // UI Updates
+      textInput.value = "";
+      activeQuestion.innerText = query;
+      gsap.fromTo(activeQuestion, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.5 });
+      document.getElementById('response-container').style.display = "none";
+
+      try {
+        const api = window.location.origin.startsWith("http") ? "/ask" : "http://127.0.0.1:5000/ask";
+        const res = await fetch(api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: query,
+            session_id: sessionId,
+            voice: voiceSelect.value,
+            audio: audioB64
+          })
+        });
+        const data = await res.json();
+
+        setThinking(false);
+        if (data.answer) {
+          if (data.session_reset) {
+            showToast("New Voice Detected - Session Reset");
+          }
+          sessionId = data.session_id || sessionId;
+          const responseContainer = document.getElementById('response-container');
+          responseContainer.style.display = "block";
+          typeWriter(data.answer, responseContainer);
+
+          if (data.audio_url) {
+            playAudio(data.audio_url);
+          } else if (data.audio) {
+            playAudio(data.audio);
+          }
+        }
+      } catch (e) {
+        setThinking(false);
+        activeQuestion.innerText = "Error encountered.";
+      }
+    }
+
+    // Voice Preview
+    // Voice Preview - Zero Latency (Local Files)
+    previewBtn.onclick = () => {
+      const voice = voiceSelect.value;
+      const audioPath = `static/voices/${voice}.mp3`;
+
+      // Stop any current audio
+      audioPlayer.pause();
+      audioPlayer.src = audioPath;
+      audioPlayer.currentTime = 0;
+
+      // Visual feedback
+      previewBtn.innerText = "🔊";
+      setSpeaking(true);
+
+      audioPlayer.onended = () => {
+        setSpeaking(false);
+        previewBtn.innerText = "🔊";
+      };
+
+      audioPlayer.play().catch(e => console.log("Preview error:", e));
+    };
+
+
+
+
+    // --- Inputs ---
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('send-btn').onclick = () => ask(textInput.value);
+
+      document.getElementById('new-chat-btn').onclick = () => {
+        audioPlayer.pause();
+        setSpeaking(false);
+        sessionId = null;
+        document.getElementById('response-container').style.display = "none";
+        activeQuestion.innerText = "New Chat Started";
+        gsap.to(activeQuestion, { opacity: 1, y: 0, duration: 0.5 });
+        setTimeout(() => gsap.to(activeQuestion, { opacity: 0, y: -20, duration: 0.5 }), 2000);
+        setSpeaking(true);
+        setTimeout(() => setSpeaking(false), 1000);
+      };
+
+      textInput.onkeypress = (e) => { if (e.key === 'Enter') ask(textInput.value); };
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition && navigator.mediaDevices) {
+        const rec = new SpeechRecognition();
+        rec.lang = "en-IN";
+
+        let audioContext, processor, input, leftChannel = [], transcript = "";
+
+        function encodeWAV(samples) {
+          let buffer = new ArrayBuffer(44 + samples.length * 2);
+          let view = new DataView(buffer);
+          const writeString = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+          writeString(0, 'RIFF');
+          view.setUint32(4, 32 + samples.length * 2, true);
+          writeString(8, 'WAVE');
+          writeString(12, 'fmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, 1, true);
+          view.setUint32(24, 16000, true);
+          view.setUint32(28, 16000 * 2, true);
+          view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true);
+          writeString(36, 'data');
+          view.setUint32(40, samples.length * 2, true);
+          let offset = 44;
+          for (let i = 0; i < samples.length; i++, offset += 2) {
+            let s = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          }
+          return new Blob([view], { type: 'audio/wav' });
+        }
+
+        rec.onstart = () => {
+          micBtn.classList.add('listening');
+          updateStatus("Listening...");
+          leftChannel = [];
+          transcript = "";
+          navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            input = audioContext.createMediaStreamSource(stream);
+            processor = audioContext.createScriptProcessor(4096, 1, 1);
+            processor.onaudioprocess = (e) => { leftChannel.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+            input.connect(processor);
+            processor.connect(audioContext.destination);
+
+            rec.onend = () => {
+              micBtn.classList.remove('listening');
+              updateStatus("Processing...");
+              if (processor) processor.disconnect();
+              if (input) input.disconnect();
+              if (stream) stream.getTracks().forEach(t => t.stop());
+              if (audioContext) audioContext.close();
+
+              if (!transcript.trim()) {
+                updateStatus("Idle");
+                return;
+              }
+
+              let flattened = new Float32Array(leftChannel.reduce((acc, c) => acc + c.length, 0));
+              let offset = 0;
+              for (let channel of leftChannel) { flattened.set(channel, offset); offset += channel.length; }
+
+              const audioBlob = encodeWAV(flattened);
+              const reader = new FileReader();
+              reader.readAsDataURL(audioBlob);
+              reader.onloadend = () => {
+                const base64data = reader.result.split(',')[1];
+                if (transcript) ask(transcript, base64data);
+              };
+            };
+          }).catch(e => { console.error("Mic Error:", e); updateStatus("Mic Error"); });
+        };
+
+        rec.onresult = (e) => {
+          transcript = e.results[0][0].transcript;
+          activeQuestion.innerText = transcript;
+        };
+
+        rec.onerror = (e) => {
+          console.log("Speech error:", e);
+          micBtn.classList.remove('listening');
+          updateStatus("Idle");
+        };
+
+        micBtn.onclick = () => {
+          if (!audioPlayer.paused) { audioPlayer.pause(); setSpeaking(false); }
+          transcript = "";
+          try { rec.start(); } catch (e) { }
+        };
+      } else {
+        micBtn.style.display = 'none';
+      }
+
+      resetIdleTimer();
+      updateStatus("Idle");
+    });
+  </script>
+</body>
+
+</html>
